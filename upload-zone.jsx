@@ -196,8 +196,10 @@ function UploadZone({
       setProgress(95);
 
       const json = await response.json();
-      const url = json.url;
-      if (!url) throw new Error('No URL in webhook response');
+      const raw = json.url;
+      if (!raw) throw new Error('No URL in webhook response');
+      // Force https — http:// URLs are blocked by browsers on deployed https sites
+      const url = raw.replace(/^http:\/\//, 'https://');
       setProgress(100);
       setResultUrl(url);
 
@@ -489,12 +491,17 @@ function UploadZone({
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={async () => {
-                    const blob = await fetch(resultUrl).then((r) => r.blob());
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = (fileMeta?.name || 'snapcut').replace(/\.[^.]+$/, '') + '-cutout.png';
-                    a.click();
-                    URL.revokeObjectURL(a.href);
+                    const filename = (fileMeta?.name || 'snapcut').replace(/\.[^.]+$/, '') + '-cutout.png';
+                    try {
+                      const blob = await fetch(resultUrl).then((r) => r.blob());
+                      const a = document.createElement('a');
+                      a.href = URL.createObjectURL(blob);
+                      a.download = filename;
+                      a.click();
+                      URL.revokeObjectURL(a.href);
+                    } catch {
+                      window.open(resultUrl, '_blank');
+                    }
                   }}
                 >
                   <Icon.download /> Download PNG

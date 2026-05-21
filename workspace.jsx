@@ -285,12 +285,17 @@ function HistoryCard({ item }) {
           style={{ width: 28, height: 28, flexShrink: 0 }}
           onClick={async (e) => {
             e.stopPropagation();
-            const blob = await fetch(item.resultUrl).then((r) => r.blob());
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = item.name.replace(/\.[^.]+$/, '') + '-cutout.png';
-            a.click();
-            URL.revokeObjectURL(a.href);
+            const filename = item.name.replace(/\.[^.]+$/, '') + '-cutout.png';
+            try {
+              const blob = await fetch(item.resultUrl).then((r) => r.blob());
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = filename;
+              a.click();
+              URL.revokeObjectURL(a.href);
+            } catch {
+              window.open(item.resultUrl, '_blank');
+            }
           }}
         >
           <Icon.download style={{ width: 14, height: 14 }} />
