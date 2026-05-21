@@ -490,18 +490,10 @@ function UploadZone({
                 </button>
                 <button
                   className="btn btn-primary btn-sm"
-                  onClick={async () => {
-                    const filename = (fileMeta?.name || 'snapcut').replace(/\.[^.]+$/, '') + '-cutout.png';
-                    try {
-                      const blob = await fetch(resultUrl).then((r) => r.blob());
-                      const a = document.createElement('a');
-                      a.href = URL.createObjectURL(blob);
-                      a.download = filename;
-                      a.click();
-                      URL.revokeObjectURL(a.href);
-                    } catch {
-                      window.open(resultUrl, '_blank');
-                    }
+                  onClick={() => {
+                    const filename = (fileMeta?.name || 'snapcut').replace(/\.[^.]+$/, '') + '-cutout';
+                    const dlUrl = resultUrl.replace('/upload/', `/upload/fl_attachment:${filename}/`);
+                    window.open(dlUrl, '_blank');
                   }}
                 >
                   <Icon.download /> Download PNG
