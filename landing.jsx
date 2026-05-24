@@ -2,7 +2,7 @@
 
 const { useState: lUseState, useEffect: lUseEffect, useRef: lUseRef } = React;
 
-function Landing({ onGetStarted, onOpenAuth, user }) {
+function Landing({ onGetStarted, onOpenAuth, user, onUpgrade, onBuyCredits }) {
   return (
     <>
       <Hero onGetStarted={onGetStarted} onOpenAuth={onOpenAuth} user={user} />
@@ -10,7 +10,7 @@ function Landing({ onGetStarted, onOpenAuth, user }) {
       <LiveDemoStrip />
       <Features />
       <HowItWorks />
-      <Pricing onGetStarted={onGetStarted} />
+      <Pricing onGetStarted={onGetStarted} onUpgrade={onUpgrade} onBuyCredits={onBuyCredits} />
       <Testimonials />
       <StatsBar />
       <FinalCTA onGetStarted={onGetStarted} />
@@ -421,15 +421,85 @@ function HowItWorks() {
   );
 }
 
+/* ============================ Credits Modal ============================ */
+function CreditsModal({ onClose, onBuyCredits }) {
+  const packs = [
+    { amount: 149, credits: 50,  label: '50 Cutouts',  badge: '' },
+    { amount: 449, credits: 200, label: '200 Cutouts', badge: 'Best value' },
+    { amount: 899, credits: 500, label: '500 Cutouts', badge: 'Power pack' },
+  ];
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 9000,
+      background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        background: '#18181b', border: '1px solid var(--line)',
+        borderRadius: 24, padding: '36px 32px', maxWidth: 420, width: '100%',
+        position: 'relative',
+      }}>
+        <button onClick={onClose} style={{
+          position: 'absolute', top: 16, right: 16,
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--muted)', fontSize: 22, lineHeight: 1,
+        }}>×</button>
+
+        <h3 style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 700, color: '#fff', marginBottom: 6 }}>
+          Buy Credits
+        </h3>
+        <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 28 }}>
+          Credits never expire. Same quality as Pro.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {packs.map((p) => (
+            <button
+              key={p.amount}
+              onClick={() => { onBuyCredits(p.amount, p.credits); onClose(); }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '16px 20px', borderRadius: 14,
+                background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line)',
+                cursor: 'pointer', transition: 'border-color 0.2s',
+                textAlign: 'left',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--orange)'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--line)'}
+            >
+              <div>
+                <div style={{ color: '#fff', fontWeight: 600, fontSize: 16 }}>{p.label}</div>
+                {p.badge && (
+                  <div style={{ fontSize: 11, color: 'var(--orange-2)', marginTop: 2 }}>{p.badge}</div>
+                )}
+              </div>
+              <div style={{
+                fontFamily: 'var(--display)', fontSize: 22, fontWeight: 700, color: '#fff'
+              }}>₹{p.amount}</div>
+            </button>
+          ))}
+        </div>
+
+        <p style={{ fontSize: 12, color: 'var(--muted-2)', textAlign: 'center', marginTop: 20 }}>
+          Secured by Razorpay · All major cards, UPI & wallets accepted
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ============================ Pricing ============================ */
-function Pricing({ onGetStarted }) {
+function Pricing({ onGetStarted, onUpgrade, onBuyCredits }) {
   const [billing, setBilling] = lUseState('monthly');
+  const [showCreditsModal, setShowCreditsModal] = lUseState(false);
+
   const tiers = [
     {
       name: 'Free',
       tag: 'For testing the waters',
-      price: { monthly: '₹0', yearly: '₹0' },
-      sub: 'forever',
+      price: { monthly: 0, yearly: 0 },
+      priceLabel: { monthly: '₹0', yearly: '₹0' },
+      sub: { monthly: 'forever', yearly: 'forever' },
       features: [
         '5 cutouts per day',
         'Up to 2000×2000px',
@@ -438,12 +508,14 @@ function Pricing({ onGetStarted }) {
       ],
       cta: 'Start free',
       highlight: false,
+      action: 'free',
     },
     {
       name: 'Pro',
       tag: 'For actual businesses',
-      price: { monthly: '₹299', yearly: '₹2,499' },
-      sub: billing === 'monthly' ? 'per month' : 'per year (save 30%)',
+      price: { monthly: 299, yearly: 2499 },
+      priceLabel: { monthly: '₹299', yearly: '₹2,499' },
+      sub: { monthly: 'per month', yearly: 'per year (save 30%)' },
       features: [
         'Unlimited cutouts',
         'Up to 5000×5000px',
@@ -454,12 +526,14 @@ function Pricing({ onGetStarted }) {
       ],
       cta: 'Go Pro',
       highlight: true,
+      action: 'pro',
     },
     {
       name: 'Credits',
       tag: 'No subscription, no commitment',
-      price: { monthly: '₹149', yearly: '₹149' },
-      sub: 'for 50 cutouts',
+      price: { monthly: 149, yearly: 149 },
+      priceLabel: { monthly: '₹149', yearly: '₹149' },
+      sub: { monthly: 'for 50 cutouts', yearly: 'for 50 cutouts' },
       features: [
         '₹149 for 50 cutouts',
         '₹449 for 200 cutouts',
@@ -469,57 +543,77 @@ function Pricing({ onGetStarted }) {
       ],
       cta: 'Buy credits',
       highlight: false,
+      action: 'credits',
     },
   ];
 
+  function handleTierClick(tier) {
+    if (tier.action === 'free') { onGetStarted(); return; }
+    if (tier.action === 'pro') { onUpgrade(billing); return; }
+    if (tier.action === 'credits') { setShowCreditsModal(true); }
+  }
+
   return (
-    <section id="pricing" className="section">
-      <div className="container">
-        <FadeIn>
-          <div style={{ textAlign: 'center', marginBottom: 36 }}>
-            <span className="chip">Pricing</span>
-            <h2 className="h-section" style={{ fontSize: 'clamp(34px, 4.5vw, 52px)', margin: '14px 0 8px' }}>
-              Honest pricing. <span className="t-grad">Cancel anytime.</span>
-            </h2>
-            <p style={{ color: 'var(--muted)', maxWidth: 580, margin: '0 auto 24px', fontSize: 16.5 }}>
-              No "contact sales", no annual lock-in, no surprise upsells in the workspace.
-            </p>
+    <>
+      <section id="pricing" className="section">
+        <div className="container">
+          <FadeIn>
+            <div style={{ textAlign: 'center', marginBottom: 36 }}>
+              <span className="chip">Pricing</span>
+              <h2 className="h-section" style={{ fontSize: 'clamp(34px, 4.5vw, 52px)', margin: '14px 0 8px' }}>
+                Honest pricing. <span className="t-grad">Cancel anytime.</span>
+              </h2>
+              <p style={{ color: 'var(--muted)', maxWidth: 580, margin: '0 auto 24px', fontSize: 16.5 }}>
+                No "contact sales", no annual lock-in, no surprise upsells in the workspace.
+              </p>
 
-            {/* Billing toggle */}
-            <div style={{
-              display: 'inline-flex', padding: 4, borderRadius: 99,
-              background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line)'
-            }}>
-              {['monthly', 'yearly'].map((b) => (
-                <button
-                  key={b}
-                  onClick={() => setBilling(b)}
-                  style={{
-                    padding: '8px 18px', borderRadius: 99, border: 0, cursor: 'pointer',
-                    background: billing === b ? 'var(--grad)' : 'transparent',
-                    color: billing === b ? '#fff' : 'var(--muted)',
-                    fontSize: 13.5, fontWeight: 600, textTransform: 'capitalize',
-                    transition: 'all 0.2s'
-                  }}>
-                  {b} {b === 'yearly' && <span style={{ fontSize: 11, opacity: 0.85 }}>–30%</span>}
-                </button>
-              ))}
+              {/* Billing toggle */}
+              <div style={{
+                display: 'inline-flex', padding: 4, borderRadius: 99,
+                background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line)'
+              }}>
+                {['monthly', 'yearly'].map((b) => (
+                  <button
+                    key={b}
+                    onClick={() => setBilling(b)}
+                    style={{
+                      padding: '8px 18px', borderRadius: 99, border: 0, cursor: 'pointer',
+                      background: billing === b ? 'var(--grad)' : 'transparent',
+                      color: billing === b ? '#fff' : 'var(--muted)',
+                      fontSize: 13.5, fontWeight: 600, textTransform: 'capitalize',
+                      transition: 'all 0.2s'
+                    }}>
+                    {b} {b === 'yearly' && <span style={{ fontSize: 11, opacity: 0.85 }}>–30%</span>}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </FadeIn>
+          </FadeIn>
 
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: 20, alignItems: 'stretch'
-        }}>
-          {tiers.map((t, i) => (
-            <FadeIn key={i} delay={i * 120}>
-              <PricingCard tier={t} billing={billing} onClick={onGetStarted} />
-            </FadeIn>
-          ))}
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 20, alignItems: 'stretch'
+          }}>
+            {tiers.map((t, i) => (
+              <FadeIn key={i} delay={i * 120}>
+                <PricingCard tier={t} billing={billing} onClick={() => handleTierClick(t)} />
+              </FadeIn>
+            ))}
+          </div>
+
+          <p style={{ textAlign: 'center', marginTop: 28, fontSize: 13, color: 'var(--muted-2)' }}>
+            Payments secured by Razorpay · UPI, cards, net banking & wallets accepted
+          </p>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {showCreditsModal && (
+        <CreditsModal
+          onClose={() => setShowCreditsModal(false)}
+          onBuyCredits={onBuyCredits}
+        />
+      )}
+    </>
   );
 }
 
@@ -569,10 +663,10 @@ function PricingCard({ tier, billing, onClick }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
           <span className="stat-num" style={{ fontSize: 52, lineHeight: 1, color: '#fff' }}>
-            {tier.price[billing]}
+            {tier.priceLabel[billing]}
           </span>
         </div>
-        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>{tier.sub}</div>
+        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>{tier.sub[billing]}</div>
 
         <button
           className={`btn ${tier.highlight ? 'btn-primary' : 'btn-secondary'}`}
@@ -790,10 +884,32 @@ function FinalCTA({ onGetStarted }) {
 /* ============================ Footer ============================ */
 function Footer() {
   const cols = [
-    { title: 'Product', links: ['Features', 'Pricing', 'API', 'Changelog', 'Roadmap'] },
-    { title: 'Use cases', links: ['Etsy sellers', 'Shopify stores', 'Instagram creators', 'Bulk processing', 'Studio photographers'] },
-    { title: 'Company', links: ['About', 'Blog', 'Careers', 'Press kit'] },
-    { title: 'Help', links: ['Docs', 'Support', 'Privacy', 'Terms', 'Status'] },
+    { title: 'Product', links: [
+      { label: 'Features', href: '#features' },
+      { label: 'Pricing', href: '#pricing' },
+      { label: 'API', href: '#' },
+      { label: 'Changelog', href: '#' },
+      { label: 'Roadmap', href: '#' },
+    ]},
+    { title: 'Use cases', links: [
+      { label: 'Etsy sellers', href: '#' },
+      { label: 'Shopify stores', href: '#' },
+      { label: 'Instagram creators', href: '#' },
+      { label: 'Bulk processing', href: '#' },
+      { label: 'Studio photographers', href: '#' },
+    ]},
+    { title: 'Company', links: [
+      { label: 'About', href: '#' },
+      { label: 'Blog', href: '#' },
+      { label: 'Contact Us', href: 'contact.html' },
+      { label: 'Press kit', href: '#' },
+    ]},
+    { title: 'Legal', links: [
+      { label: 'Privacy Policy', href: 'privacy.html' },
+      { label: 'Terms & Conditions', href: 'terms.html' },
+      { label: 'Refund Policy', href: 'refund.html' },
+      { label: 'Shipping & Delivery', href: 'shipping.html' },
+    ]},
   ];
   return (
     <footer style={{ borderTop: '1px solid var(--line)', padding: '64px 0 32px', marginTop: 60 }}>
@@ -824,9 +940,11 @@ function Footer() {
               }}>{c.title}</div>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {c.links.map((l) => (
-                  <li key={l}>
+                  <li key={l.label}>
                     <a style={{ fontSize: 14, color: 'var(--text-2)' }} className="dl-link"
-                       href="#" onClick={(e) => e.preventDefault()}>{l}</a>
+                       href={l.href}
+                       onClick={l.href === '#' ? (e) => e.preventDefault() : undefined}
+                    >{l.label}</a>
                   </li>
                 ))}
               </ul>
