@@ -48,7 +48,7 @@ function App() {
     setCredits((c) => Math.max(0, c - 1));
   }
 
-  function openRazorpay({ amount, description, onSuccess }) {
+  async function openRazorpay({ amount, description, onSuccess }) {
     const key = window.SNAPCUT_CONFIG?.RAZORPAY_KEY_ID;
     if (!key || key === 'rzp_test_XXXXXXXXXXXXXXXX') {
       if (window.__toast) window.__toast.push('Add your Razorpay key to config.js to enable payments', 'error');
@@ -58,12 +58,31 @@ function App() {
       if (window.__toast) window.__toast.push('Razorpay failed to load. Check your internet connection.', 'error');
       return;
     }
+
+    // Step 1: create order on backend to get order_id (required by Razorpay)
+    let orderId = null;
+    try {
+      const r = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, currency: 'INR' }),
+      });
+      if (r.ok) {
+        const data = await r.json();
+        orderId = data.order_id;
+      }
+    } catch (_) {
+      // API unreachable (e.g. localhost without backend) — orderId stays null
+    }
+
+    // Step 2: open Razorpay checkout with order_id
     const options = {
       key,
       amount,
       currency: 'INR',
       name: 'SnapCut',
       description,
+      ...(orderId ? { order_id: orderId } : {}),
       handler(response) {
         onSuccess(response);
       },
